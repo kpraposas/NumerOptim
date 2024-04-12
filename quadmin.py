@@ -3,9 +3,7 @@
 """
 
 import numpy as np
-from numoptim import quadminsearch
-import numoptim
-
+from numoptim import SD, CG, CGNR, CGR, param
 def An(x, y):
     n = len(x)
     A = [[0]*n for _ in range(n)]
@@ -15,9 +13,8 @@ def An(x, y):
 
 
 if __name__ == "__main__":
-    parameters = numoptim.param()
+    parameters = param()
     parameters.tol = 1e-6
-    methods = ['sd', 'cg', 'cgnr', 'cgr']
 
     x_in = np.zeros(3)
     x = x_in[:]
@@ -26,21 +23,12 @@ if __name__ == "__main__":
     for y in [1, 2, 5, 10, 20, 50]:
         print('-'*75)
         print('\u03B3 =', y, '\n')
-        for method in methods:
-            A = An(x_in, y)
-            x, funval, grad_norm, k = quadminsearch(A, b, 0, x, method, parameters)
-            print("Method                  :", method.upper())
-            print(f"Initial Iterate         : {x_in}")
-            print(f"Approximate minimizer   : {x}")
-            print(f"Function Value          : {funval}")
-            print(f"Gradient Norm           : {grad_norm}")
-            print(f"Number of Iterations    : {k}")
-            print(f"Condition Number        : {y**2}")
-            if method == "sd":
-                x = [-1, -y, -y**2]
-                eps = np.finfo(float).eps
-                k = np.ceil((np.log(parameters.tol) - (np.log(y * np.sqrt(1+y**2+y**4)))) / (np.log(y**2-1+eps) - np.log(y**2+1)))
-                print(f"Required Iterations     : {k}")
-            print("")
-            x = x_in[:]
+        A = An(x_in, y)
+        results = [
+            SD(A, b, 0., x, parameters).__str__(),
+            CG(A, b, 0., x, parameters).__str__(),
+            CGNR(A, b, 0., x, parameters).__str__(),
+            CGR(A, b, 0., x, parameters).__str__()
+        ]
+        print("\n\n".join(results))
         print('-'*75)

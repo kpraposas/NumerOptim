@@ -3,8 +3,8 @@ Steepest Descent Method with Armijo Rule and Backtracking
 """
 
 import numpy as np
-import numoptim
-from numoptim import steepest_descent
+from numoptim import steepest_descent, options, param
+from time import time
 
 def rosenbrock(x):
     """
@@ -17,11 +17,8 @@ def rosenbrock(x):
     -------
         float : value of the Rosenbrock function at x
     """
-    n = len(x)
-    s = 0
-    for k in range(n - 1):
-        s = s + 100*(x[k+1] - x[k]**2)**2  + (1 - x[k])**2
-    return s
+    x = np.array(x)
+    return np.sum(100 * (x[1:] - x[:-1]**2)**2 + (1 - x[:-1])**2)
 
 def grad_rosenbrock(x):
     """
@@ -35,12 +32,14 @@ def grad_rosenbrock(x):
         list : value of the gradient of Rosenbrock function at x
     """
     n = len(x)
-    grad = []
-    grad.append(-400.*(x[1]-x[0]**2)*x[0] - 2.*(1-x[0]))
-    for k in range(1, n - 1):
-        grad.append(200.*(x[k]-x[k-1]**2) - 400.*(x[k+1]-x[k]**2)*x[k] - 2.*(1-x[k]))
-    grad.append(200.*(x[n-1] - x[n-2]**2))
-    return np.array(grad)
+    grad = np.zeros(n)
+
+    grad[0] = -400. * (x[1] - x[0] ** 2) * x[0] - 2. * (1 - x[0])
+    grad[1:-1] = 200. * (x[1:-1] - x[:-2] ** 2)\
+        - 400. * (x[2:] - x[1:-1] ** 2) * x[1:-1] - 2. * (1 - x[1:-1])
+    grad[-1] = 200. * (x[-1] - x[-2] ** 2)
+
+    return grad
 
 def hess_rosenbrock(x):
     """
@@ -54,7 +53,7 @@ def hess_rosenbrock(x):
     list : value of the Hessian of the Rosenbrock function at x
     """
     n = len(x)
-    hess = [[0]* n for i in range(n)]
+    hess = np.zeros((n, n))
     hess[0][0] = -400.*x[1] + 1200.*x[0]**2 + 2
     hess[0][1] = -400.*x[0]
     for k in range(1, n - 1):
@@ -67,37 +66,44 @@ def hess_rosenbrock(x):
     
 if __name__ == "__main__":
     
-    options = numoptim.options
+    start_time = time()
     methods = ["backtrack", "polyinterp"]
     criteria = ["armijo", "goldstein", "wolfe", "strongwolfe"]
     
-    parameters = numoptim.param()
+    parameters = param()
     parameters.tol = 1e-6
     parameters.maxit = 5*1e4
     parameters.iter_hist = False
+    parameters.rho = 0.5
     parameters.rho_r = 0.5
+    parameters.alpha_in = 1.
+    parameters.maxback = 30
+    parameters.c1 = 1e-4
+    parameters.abstol = 1e-12
+    parameters.reltol = 1e-8
     
     N = 100
     x_in = np.zeros(N)
+    
+    print("MINIMIZER SEARCH ON THE ROSENBROCK FUNCTION USING STEEPEST DESCENT")
+    print('-'*109)
+    print("{}\t\t{}\t\t{}\t{}\t\t{}\t\t\t{}".format("SSM", "SSC", "NUMIT",
+                                              "RELATIVE ERR", "FUNVAL",
+                                              "GRADNORM"))
+    print('-'*109)
     for method in methods:
         for criterion in criteria:
             options["ssm"], options["ssc"] = method, criterion
-            x, funval, grad_norm, it, num_feval, num_geval, num_heval, term_flag, elapsed_time = \
-                steepest_descent(rosenbrock, grad_rosenbrock, np.array(x_in), options, parameters)
-            print('-'*72)
-            print(f"METHOD                          : Steepest Descent")
-            print("STEPSIZE SELECTION METHOD       :", options["ssm"].capitalize())
-            print("STEPSIZE SELECTION CRITERION    :", options["ssc"].capitalize())
-            print(f"INITIAL ITERATE                 : \n{x_in}")
-            print(f"APPROXIMATE MINIMIZER           : \n{x}")
-            print(f"FUNCTION VALUE                  : {funval}")
-            print(f"GRADIENT NORM                   : {grad_norm}")
-            print(f"TOLERANCE                       : {parameters.tol}")
-            print(f"NITERS                          : {it}\t\tMAXIT: {parameters.maxit}")
-            print(f"TERMINATION                     : {term_flag}")
-            print(f"NFEVALS                         : {num_feval}")
-            print(f"NGEVALS                         : {num_geval}")
-            print(f"NHEVALS                         : {num_heval}")
-            print(f"ELAPSED TIME                    : {elapsed_time} seconds")
-            print('-'*72, "\n")
-        
+            result = steepest_descent(rosenbrock, grad_rosenbrock,
+                                      np.array(x_in), options, parameters)
+            error = np.linalg.norm(result.x - np.ones(N))
+            print("{}\t{:<8}\t{}\t{}\t{}\t{}".format(method.capitalize(),
+                                                  criterion.capitalize(),
+                                                  result.it,
+                                                  error, result.fx,
+                                                  result.grad_norm))
+    print('-'*109)
+    
+    stop_time = time()
+    elapsed_time = stop_time - start_time
+    print(f"This program ran for {elapsed_time} seconds.")

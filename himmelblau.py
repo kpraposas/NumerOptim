@@ -55,7 +55,7 @@ def hess_himmelblau(x):
     return 
 
 # Plotting function
-def plot_surface(f, xlim, ylim, gridsize):
+def plot_surface(f, xlim, ylim, gridsize=100):
     """
     Plots the surface corresponding to the function f on a rectangular domain
     
@@ -92,14 +92,15 @@ if __name__ == "__main__":
     options["ssm"] = "backtrack"
     options["ssc"] = "goldstein"
     for x_in in [[2., 2.], [2., -2.], [-2., -2.], [-2., 2.]]:
-        result = steepest_descent(himmelblau, grad_himmelblau, np.array(x_in), options, parameters)
+        result = steepest_descent(himmelblau, grad_himmelblau, np.array(x_in),
+                                  options, parameters)
         print(f"Initial Iterate         : {x_in}")
-        print(f"Approximate minimizer   : {result[0]}")
-        print(f"Function Value          : {result[1]}")
-        print(f"Gradient Norm           : {result[2]}")
-        print(f"Number of Iterations    : {result[3]}")
+        print(f"Approximate minimizer   : {result.x}")
+        print(f"Function Value          : {result.fx}")
+        print(f"Gradient Norm           : {result.grad_norm}")
+        print(f"Number of Iterations    : {result.it}")
         print("")
-        list_minimizers.append(result[0])
+        list_minimizers.append(result.x)
     
     # plot surface corresponding to the Himmelblau function
     # and scatter plot of the computed minimizers
